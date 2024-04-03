@@ -14,9 +14,13 @@
 
 namespace sw {
 
+namespace detail {
+
 enum Parser {
     default_parser,
     
+};
+
 };
 
 

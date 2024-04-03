@@ -13,8 +13,10 @@
 #pragma once
 // type
 #include "./detail/type.hpp"
+// serializer
+#include "./detail/output/serializer.hpp"
 // parser
-#include "./detail/parser.hpp"
+#include "./detail/input/parser.hpp"
 
 namespace sw {
 
@@ -23,11 +25,11 @@ public:
 
       ///< wrapper function for construct a json object with json string
     template <typename _Fn>
-    static json parse(const json_string& s, _Fn fn) {
+    static json parse(const detail::json_string& s, _Fn fn) {
         json = fn(s);
     }
 private:
-    object_t content_;
+    detail::object_t content_;
 };
 
 };

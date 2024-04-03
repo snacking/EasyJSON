@@ -26,10 +26,12 @@
 #include <any>
 // std::optional
 #include <optional>
+// serialze
+#include "./output/serializer.hpp"
 
 namespace sw {
 
-using json_string = std::string;
+namespace detail {
 
 union value_t;
 class inner;
@@ -88,21 +90,6 @@ union value_t {
 
     value_t() = default;
     value_t(boolean_t v) noexcept { boolean = v; }
-
-    json_string serialize(type type_) {
-        json_string str = "";
-        switch (type_)
-        {
-        case type::null:
-            str += "null";
-            break;
-        case type::boolean:
-            str += "null";
-            break;
-        default:
-            break;
-        }
-    } 
 };
 
 class inner {
@@ -113,13 +100,14 @@ public:
     }
 
     json_string serialize() {
-        return value_.serialize(type_);
     }
 private:
     value_t value_;     ///< real value
     string_t string_;   ///< raw string (allow partly update json string)
     type type_;         ///< type of value
     int order_;      ///< priority of value (allow serialize in original order)
+};
+
 };
 
 };
