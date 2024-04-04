@@ -22,10 +22,6 @@
 #include <unordered_map>
 // std::variant
 #include <variant>
-// std::any
-#include <any>
-// std::optional
-#include <optional>
 // serialze
 #include "./output/serializer.hpp"
 
@@ -34,7 +30,7 @@ namespace sw {
 namespace detail {
 
 union value_t;
-class inner;
+class value;
 
 enum class type : std::uint8_t
 {
@@ -58,14 +54,20 @@ using number_t = union {
     double number_float;
 };
 using binary_t = std::vector<uint8_t>;
-using array_t = std::vector<value_t>;
-using object_t = union {
-    std::map<string_t, inner> ordered_map;
-    std::unordered_map<string_t, inner> unordered_map;
+using array_t = std::vector<value>;
+using object_t = struct {
+auto operator ()() {
+    if (ordered_) return std::get<std::map<string_t, value> > (map_);
+    return std::get<std::unordered_map<string_t, value> > (map_);
+}
+std::variant<
+    std::map<string_t, value>,
+    std::unordered_map<string_t, value>
+> map_;
+bool ordered_;
 };
 
 /*
-
 
 JSON type | valueT type    | used type
 --------- | ---------------| ------------------------
@@ -76,7 +78,6 @@ number    | number_t       | @ref number_t
 binary    | binary_t       | pointer to @ref binary_t
 array     | array_t        | pointer to @ref array_t
 object    | object_t       | pointer to @ref object_t
-
 
 */
 
@@ -92,20 +93,57 @@ union value_t {
     value_t(boolean_t v) noexcept { boolean = v; }
 };
 
-class inner {
+class value {
 public:
-    bool operator < (const inner& i) {
+    bool operator < (const value& i) {
         return order_ == i.order_ ?
             type_ < i.type_ : order_ < i.order_;
     }
 
-    json_string serialize() {
+    json_string to_json() {
+        std::string ret;    ///< return value of type::array and type::object
+        bool first = true;  ///< decide wether to add comma in return value of type::array and type::object
+        switch (type_) {
+        case type::null:
+            return "null";
+        case type::boolean:
+            return value_.boolean ? "true" : "false";
+        case type::string:
+            return "\"" + *value_.string + "\"";
+        case type::number_integer:
+            return std::to_string(value_.number.number_integer);
+        case type::number_unsigned:
+            return std::to_string(value_.number.number_unsigned);
+        case type::number_float:
+            return std::to_string(value_.number.number_float);
+        case type::binary:
+        case type::array:
+            ret = "[";
+            for (const auto& v : *value_.array) {
+                if (!first) ret += ", ";
+                ret += v.to_json();
+                first = false;
+            }
+            ret += "]";
+            return ret;
+        case type::object:
+            ret = "{";
+            // for (const auto& [k, v] : *value_.object) {
+            //     if (!first) ret += ", ";
+            //     ret += v.to_json();
+            //     first = false;
+            // }
+            ret += "}";
+            return ret;
+        case type::discarded:
+        default:
+        }
     }
 private:
     value_t value_;     ///< real value
     string_t string_;   ///< raw string (allow partly update json string)
     type type_;         ///< type of value
-    int order_;      ///< priority of value (allow serialize in original order)
+    int order_;         ///< priority of value (allow serialize in original order)
 };
 
 };

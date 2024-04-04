@@ -25,8 +25,6 @@ namespace sw {
 namespace detail {
 
 using json_string = std::string;
-
-extern class inner;
   
 template<typename, typename = std::void_t<>>  
 struct has_to_json : std::false_type {};  
@@ -38,13 +36,7 @@ template <typename _Tp>
 json_string serialize(_Tp v) {
     static_assert(has_to_json<_Tp>::value, "Type does not have a to_json member function");
     return v.to_json();  
-}  
-  
-template <>  
-json_string serialize(inner v) {  
-
-} 
-
+}
 
 };
 
