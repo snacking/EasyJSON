@@ -44,8 +44,6 @@ public:
         return *this;  
     }  
 
-    size_t size() const { return content_.size(); } 
-    bool empty() const { return content_.empty(); }
 private:
     template<typename _Tp, std::enable_if_t<has_from_json<_Tp>::value, int> = 0>  
     static _Tp from_json(const json& json) {  
@@ -54,7 +52,7 @@ private:
 
     template<typename _Tp, std::enable_if_t<!has_from_json<_Tp>::value, int> = 0>  
     static _Tp from_json(const json& json) {  
-        static_assert(std::is_same<_Tp, void>::value, "Type _Tp does not have a from_json static member function");  
+        static_assert(std::is_same<_Tp, void>::value, "Type does not have a from_json static member function");  
         return _Tp(); 
     } 
 

@@ -42,7 +42,7 @@ enum class type : std::uint8_t
     number_float,     ///< number value (floating-point)
     binary,           ///< binary array (ordered collection of bytes)
     array,            ///< array (ordered collection of values)
-    object,           ///< object (unordered set of name/value pairs)
+    object,           ///< object (set of key/value pairs)
     discarded         ///< discarded by the parser callback function
 };
 
@@ -55,17 +55,10 @@ using number_t = union {
 };
 using binary_t = std::vector<uint8_t>;
 using array_t = std::vector<value>;
-using object_t = struct {
-auto operator ()() {
-    if (ordered_) return std::get<std::map<string_t, value> > (map_);
-    return std::get<std::unordered_map<string_t, value> > (map_);
-}
-std::variant<
+using object_t = std::variant<
     std::map<string_t, value>,
     std::unordered_map<string_t, value>
-> map_;
-bool ordered_;
-};
+>;
 
 /*
 
@@ -90,6 +83,7 @@ union value_t {
     std::shared_ptr<object_t> object;
 
     value_t() = default;
+    ~value_t() = default;
     value_t(boolean_t v) noexcept { boolean = v; }
 };
 
@@ -100,7 +94,7 @@ public:
             type_ < i.type_ : order_ < i.order_;
     }
 
-    json_string to_json() {
+    json_string to_json() const {
         std::string ret;    ///< return value of type::array and type::object
         bool first = true;  ///< decide wether to add comma in return value of type::array and type::object
         switch (type_) {
@@ -128,11 +122,15 @@ public:
             return ret;
         case type::object:
             ret = "{";
-            // for (const auto& [k, v] : *value_.object) {
-            //     if (!first) ret += ", ";
-            //     ret += v.to_json();
-            //     first = false;
-            // }
+            for (const auto& [k, v] : (ordered_ ? std::get<std::map<string_t, value> >(*value_.object) : std::get<std::unordered_map<string_t, value> >(*value_.object))) {
+                if (!first) ret += ", ";
+                ret += "{";
+                ret += k;
+                ret += ": ";
+                ret += v.to_json();
+                ret += "}";
+                first = false;
+            }
             ret += "}";
             return ret;
         case type::discarded:
@@ -140,10 +138,11 @@ public:
         }
     }
 private:
-    value_t value_;     ///< real value
+    value_t value_;     ///< value inside
     string_t string_;   ///< raw string (allow partly update json string)
     type type_;         ///< type of value
     int order_;         ///< priority of value (allow serialize in original order)
+    bool ordered_;      ///< indicate wether the object map inside is ordered, the convert from ordered to unordered is NOT reversible
 };
 
 };
