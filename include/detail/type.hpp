@@ -111,6 +111,7 @@ public:
         case type::number_float:
             return std::to_string(value_.number.number_float);
         case type::binary:
+            
         case type::array:
             ret = "[";
             for (const auto& v : *value_.array) {
@@ -122,14 +123,19 @@ public:
             return ret;
         case type::object:
             ret = "{";
-            for (const auto& [k, v] : (ordered_ ? std::get<std::map<string_t, value> >(*value_.object) : std::get<std::unordered_map<string_t, value> >(*value_.object))) {
-                if (!first) ret += ", ";
-                ret += "{";
-                ret += k;
-                ret += ": ";
-                ret += v.to_json();
-                ret += "}";
-                first = false;
+            if (order_) {
+                for (const auto& [k, v] : std::get<std::map<string_t, value> >(*value_.object)) {
+                    if (!first) ret += ", ";
+                    ret += "{\"" + k + "\": " + v.to_json() + "}";
+                    first = false;
+                }
+            }
+            else {
+                for (const auto& [k, v] : std::get<std::unordered_map<string_t, value> >(*value_.object)) {
+                    if (!first) ret += ", ";
+                    ret += "{\"" + k + "\": " + v.to_json() + "}";
+                    first = false;
+                }
             }
             ret += "}";
             return ret;
