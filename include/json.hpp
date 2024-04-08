@@ -11,6 +11,8 @@
 ***/
 
 #pragma once
+// std::variant::get
+#include <variant>
 // type
 #include "./detail/type.hpp"
 // serializer
@@ -19,6 +21,20 @@
 #include "./detail/input/parser.hpp"
 
 namespace sw {
+
+class value {
+public:
+    value() = default;
+    value(detail::boolean_t b) : value_.boolean(b), type_(detail::type::boolean), order_(-1) {}
+    bool operator < (const value& i) {
+        return order_ == i.order_ ?
+            type_ < i.type_ : order_ < i.order_;
+    }
+private:
+    detail::value_t value_;     ///< value inside
+    detail::string_t string_;   ///< raw string (allow partly update json string)
+    int order_;                 ///< order of value
+};
 
 class json;
 

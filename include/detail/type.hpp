@@ -24,13 +24,13 @@
 #include <variant>
 // serialze
 #include "./output/serializer.hpp"
+// base64
+#include "./conversions/base64.hpp"
 
 namespace sw {
 
-namespace detail {
-
-union value_t;
 class value;
+namespace detail {
 
 enum class type : std::uint8_t
 {
@@ -42,7 +42,8 @@ enum class type : std::uint8_t
     number_float,     ///< number value (floating-point)
     binary,           ///< binary array (ordered collection of bytes)
     array,            ///< array (ordered collection of values)
-    object,           ///< object (set of key/value pairs)
+    object,           ///< object (set of unordered key/value pairs)
+    ordered_object,   ///< object (set of ordered key/value pairs)
     discarded         ///< discarded by the parser callback function
 };
 
@@ -73,82 +74,75 @@ array     | array_t        | pointer to @ref array_t
 object    | object_t       | pointer to @ref object_t
 
 */
-
-union value_t {
-    std::shared_ptr<string_t> string;
-    boolean_t boolean;
-    number_t number;
-    std::shared_ptr<binary_t> binary;
-    std::shared_ptr<array_t> array;
-    std::shared_ptr<object_t> object;
-
-    value_t() = default;
-    ~value_t() = default;
-    value_t(boolean_t v) noexcept { boolean = v; }
-};
-
-class value {
+struct value_t {
 public:
-    bool operator < (const value& i) {
-        return order_ == i.order_ ?
-            type_ < i.type_ : order_ < i.order_;
-    }
+    ~value_t() = default;
+
+    value_t() : type_(type::null) {};
+    value_t(const boolean_t& b) : type_(type::boolean), boolean{b} {}
+    value_t(const string_t& s) : type_(type::string), string{std::make_shared<string_t>(s)} {}
+    value_t(const number_t& n) : type_(type::number_integer), number{n} {}
+    value_t(const binary_t& b) : type_(type::binary), binary{std::make_shared<binary_t>(b)} {}
 
     json_string to_json() const {
         std::string ret;    ///< return value of type::array and type::object
         bool first = true;  ///< decide wether to add comma in return value of type::array and type::object
         switch (type_) {
-        case type::null:
+        case detail::type::null:
             return "null";
-        case type::boolean:
-            return value_.boolean ? "true" : "false";
-        case type::string:
-            return "\"" + *value_.string + "\"";
-        case type::number_integer:
-            return std::to_string(value_.number.number_integer);
-        case type::number_unsigned:
-            return std::to_string(value_.number.number_unsigned);
-        case type::number_float:
-            return std::to_string(value_.number.number_float);
-        case type::binary:
-            
-        case type::array:
+        case detail::type::boolean:
+            return boolean ? "true" : "false";
+        case detail::type::string:
+            return "\"" + *string + "\"";
+        case detail::type::number_integer:
+            return std::to_string(number.number_integer);
+        case detail::type::number_unsigned:
+            return std::to_string(number.number_unsigned);
+        case detail::type::number_float:
+            return std::to_string(number.number_float);
+        case detail::type::binary:
+            return sw::base64_encode(*binary);
+        case detail::type::array:
             ret = "[";
-            for (const auto& v : *value_.array) {
+            for (const auto& v : *array) {
                 if (!first) ret += ", ";
                 ret += v.to_json();
                 first = false;
             }
             ret += "]";
             return ret;
-        case type::object:
+        case detail::type::object:
             ret = "{";
-            if (order_) {
-                for (const auto& [k, v] : std::get<std::map<string_t, value> >(*value_.object)) {
-                    if (!first) ret += ", ";
-                    ret += "{\"" + k + "\": " + v.to_json() + "}";
-                    first = false;
-                }
-            }
-            else {
-                for (const auto& [k, v] : std::get<std::unordered_map<string_t, value> >(*value_.object)) {
-                    if (!first) ret += ", ";
-                    ret += "{\"" + k + "\": " + v.to_json() + "}";
-                    first = false;
-                }
+            for (const auto& [k, v] : std::get<std::unordered_map<detail::string_t, value> >(*object)) {
+                if (!first) ret += ", ";
+                ret += "{\"" + k + "\": " + v.to_json() + "}";
+                first = false;
             }
             ret += "}";
             return ret;
-        case type::discarded:
-        default:
+        case detail::type::ordered_object:
+            ret = "{";
+            for (const auto& [k, v] : std::get<std::map<detail::string_t, value> >(*object)) {
+                if (!first) ret += ", ";
+                ret += "{\"" + k + "\": " + v.to_json() + "}";
+                first = false;
+            }
+            ret += "}";
+            return ret;
+        case detail::type::discarded:
+            return "";
         }
     }
-private:
-    value_t value_;     ///< value inside
-    string_t string_;   ///< raw string (allow partly update json string)
-    type type_;         ///< type of value
-    int order_;         ///< priority of value (allow serialize in original order)
-    bool ordered_;      ///< indicate wether the object map inside is ordered, the convert from ordered to unordered is NOT reversible
+
+    union {
+        boolean_t boolean;
+        std::shared_ptr<string_t> string;
+        number_t number;
+        std::shared_ptr<binary_t> binary;
+        std::shared_ptr<array_t> array;
+        std::shared_ptr<object_t> object;
+    };
+    type type_; 
 };
 
 };
