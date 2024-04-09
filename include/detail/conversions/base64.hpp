@@ -97,7 +97,7 @@ static std::string encode(String s, bool url) {
 }
 
 template <typename Binary>
-std::string base64_encode(Binary bytes_to_encode, size_t in_len, bool url) {
+std::string base64_encode(Binary bytes_to_encode, size_t in_len, bool url = false) {
 
     size_t len_encoded = (in_len + 2) / 3 * 4;
 
