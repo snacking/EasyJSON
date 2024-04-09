@@ -77,8 +77,8 @@ static inline std::string insert_linebreaks(std::string str, std::size_t distanc
 // String here could be std::string or std::string_view (Require c++17 or above)
 
 template <typename String, unsigned int line_length>
-static std::string encode_with_linebreaks(String s) {
-    return insert_linebreaks(base64_encode(Str, false), line_length);
+static std::string encode_with_line_breaks(String s) {
+    return insert_linebreaks(base64_encode(s, false), line_length);
 }
 
 template <typename String>

@@ -35,7 +35,7 @@ struct has_to_json<_Tp, std::void_t<decltype(std::declval<_Tp>().to_json())>> : 
 template <typename _Tp>  
 json_string serialize(_Tp v) {
     static_assert(has_to_json<_Tp>::value, "Type does not have a to_json member function");
-    return v.to_json();  
+    return v.to_json();
 }
 
 };
